@@ -1,0 +1,17 @@
+{
+  "resource_quota_bytes": 0,
+  "registration_limit": 0,
+  "public_base_url": "",
+  "data_server_base_url": "",
+  "data_server_sync_token": "",
+  "jwt_secret": "default-secret-at-least-32-characters-long",
+  "video_enabled": false,
+  "media_transfer_rate_bytes": null,
+  "update_transfer_rate_bytes": null,
+  "video_transfer_rate_bytes": null,
+  "music_transfer_rate_bytes": null,
+  "media_download_concurrency": null,
+  "update_download_concurrency": null,
+  "video_download_concurrency": null,
+  "music_download_concurrency": null
+}

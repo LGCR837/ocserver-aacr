@@ -1,0 +1,3 @@
+23:40:12 | WARN | using default admin credentials; set ADMIN_USER/ADMIN_PASSWORD
+23:40:13 | INFO | listening on :8080
+23:40:29 | 200 | GET  | /                                    |    0ms |    3.6KB | ::1 | Mozilla/5.0 (Windows ...
