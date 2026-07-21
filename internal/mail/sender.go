@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 )
 
 func SendCode(toEmail, code string) error {
@@ -12,13 +13,21 @@ func SendCode(toEmail, code string) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("python3", script, toEmail, code)
+	python := pythonExecutable()
+	cmd := exec.Command(python, script, toEmail, code)
 	cmd.Dir = filepath.Dir(script)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("mail failed: %v (%s)", err, string(out))
 	}
 	return nil
+}
+
+func pythonExecutable() string {
+	if runtime.GOOS == "windows" {
+		return "python"
+	}
+	return "python3"
 }
 
 func mailScriptPath() (string, error) {
