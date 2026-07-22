@@ -13,12 +13,10 @@ if not defined REFRESH_TOKEN_TTL set "REFRESH_TOKEN_TTL=2592000"
 
 set "BIN_PATH="
 if defined BIN_NAME if exist "%SERVER_DIR%\%BIN_NAME%" set "BIN_PATH=%SERVER_DIR%\%BIN_NAME%"
-if not defined BIN_PATH if exist "%SERVER_DIR%\server.exe" set "BIN_PATH=%SERVER_DIR%\server.exe"
-if not defined BIN_PATH if exist "%SERVER_DIR%\server_windows_amd64.exe" set "BIN_PATH=%SERVER_DIR%\server_windows_amd64.exe"
-if not defined BIN_PATH if exist "%SERVER_DIR%\server_windows_amd64" set "BIN_PATH=%SERVER_DIR%\server_windows_amd64"
+if not defined BIN_PATH if exist "%SERVER_DIR%\ocserver_windows_amd64.exe" set "BIN_PATH=%SERVER_DIR%\ocserver_windows_amd64.exe"
 
 if not defined BIN_PATH (
-  echo Server binary not found. Build it with: .\build_amd64.bat
+  echo Server binary not found. Build it with: .\build.ps1
   exit /b 1
 )
 

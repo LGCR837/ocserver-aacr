@@ -13,8 +13,6 @@ export REFRESH_TOKEN_TTL=${REFRESH_TOKEN_TTL:-2592000} # 30 days
 BIN_PATH=""
 if [ -n "${BIN_NAME:-}" ] && [ -x "$SERVER_DIR/$BIN_NAME" ]; then
   BIN_PATH="$SERVER_DIR/$BIN_NAME"
-elif [ -x "$SERVER_DIR/server" ]; then
-  BIN_PATH="$SERVER_DIR/server"
 else
   OS=$(uname -s | tr '[:upper:]' '[:lower:]')
   ARCH=$(uname -m)
@@ -22,15 +20,13 @@ else
     x86_64) ARCH=amd64 ;;
     arm64|aarch64) ARCH=arm64 ;;
   esac
-  if [ -x "$SERVER_DIR/server_${OS}_${ARCH}" ]; then
-    BIN_PATH="$SERVER_DIR/server_${OS}_${ARCH}"
-  elif [ "$OS" = "linux" ] && [ -x "$SERVER_DIR/server_amd64" ]; then
-    BIN_PATH="$SERVER_DIR/server_amd64"
+  if [ -x "$SERVER_DIR/ocserver_${OS}_${ARCH}" ]; then
+    BIN_PATH="$SERVER_DIR/ocserver_${OS}_${ARCH}"
   fi
 fi
 
 if [ -z "$BIN_PATH" ]; then
-  echo "Server binary not found. Build it with: ./build_amd64.sh"
+  echo "Server binary not found. Build it with: pwsh ./build.ps1"
   exit 1
 fi
 

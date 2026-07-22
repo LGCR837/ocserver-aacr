@@ -1,8 +1,16 @@
 # 构建产物
-server_linux_amd64
-server_windows_amd64.exe
-server_windows_amd64.exe~
-server_*.exe~
+ocserver_windows_amd64.exe
+ocserver_linux_amd64
+ocserver_*_amd64
+ocserver_*_amd64.exe
+ocserver_*_386
+ocserver_*_386.exe
+ocserver_*_arm64
+ocserver_*_arm64.exe
+ocserver_*_arm
+ocserver_*_arm.exe
+build/
+*.exe~
 nul.exe
 *.exe.bak
 

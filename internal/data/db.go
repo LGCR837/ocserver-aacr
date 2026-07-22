@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -12,6 +13,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
 )
+
+//go:embed schema.sql
+var embeddedSchema []byte
 
 func OpenDB(ctx context.Context, dsn string) (*sqlx.DB, error) {
 	// SQLite 默认使用 sqlite 驱动名 (modernc.org/sqlite)
@@ -117,15 +121,17 @@ func initSchema(db *sqlx.DB) error {
 }
 
 func readSchemaFile() ([]byte, error) {
+	if len(embeddedSchema) > 0 {
+		return embeddedSchema, nil
+	}
+	// Fallback: try disk for development/override
 	if schema, err := os.ReadFile("schema.sql"); err == nil {
 		return schema, nil
 	}
-
 	exe, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
-
 	return os.ReadFile(filepath.Join(filepath.Dir(exe), "schema.sql"))
 }
 

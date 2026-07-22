@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -19,7 +20,7 @@ func main() {
 	httpapi.StartTUI()
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("config error: %v", err)
+		fatalLog("config error: %v", err)
 	}
 	if cfg.AdminUser == "admin" && cfg.AdminPassword == "admin123456" {
 		log.Printf("%s | WARN | using default admin credentials; set ADMIN_USER/ADMIN_PASSWORD", time.Now().Format("15:04:05"))
@@ -30,15 +31,15 @@ func main() {
 
 	db, err := data.OpenDB(ctx, cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("db error: %v", err)
+		fatalLog("db error: %v", err)
 	}
 	defer db.Close()
 
 	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
-		log.Fatalf("upload dir error: %v", err)
+		fatalLog("upload dir error: %v", err)
 	}
 	if err := os.MkdirAll(cfg.UpdateDir, 0o755); err != nil {
-		log.Fatalf("update dir error: %v", err)
+		fatalLog("update dir error: %v", err)
 	}
 
 	h := httpapi.New(cfg, db)
@@ -55,7 +56,7 @@ func main() {
 	go func() {
 		log.Printf("%s | INFO | listening on :%s", time.Now().Format("15:04:05"), cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			fatalLog("server error: %v", err)
 		}
 	}()
 
@@ -64,4 +65,13 @@ func main() {
 	defer cancel()
 	_ = srv.Shutdown(shutdownCtx)
 	httpapi.StopTUI()
+}
+
+// fatalLog stops the TUI, prints the error to stderr, then exits.
+// This ensures fatal errors are always visible even when TUI is active
+// (TUI redirects log output to an in-memory buffer that os.Exit would discard).
+func fatalLog(format string, args ...interface{}) {
+	httpapi.StopTUI()
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
+	os.Exit(1)
 }
