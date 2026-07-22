@@ -88,6 +88,11 @@ func (a *API) handleEmailCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !a.cfg.EmailVerifyEnabled {
+		writeError(w, http.StatusBadRequest, "email_verify_disabled", "未开启邮箱验证请乱填")
+		return
+	}
+
 	a.sendLimiter.PruneOlderThan(10 * time.Minute)
 	ok, wait := a.sendLimiter.Allow(email, 120*time.Second)
 	if !ok {

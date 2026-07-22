@@ -36,6 +36,7 @@ type Config struct {
 	UpdateDownloadConcurrency int
 	VideoDownloadConcurrency  int
 	MusicDownloadConcurrency  int
+	EmailVerifyEnabled        bool
 }
 
 func Load() (Config, error) {
@@ -139,11 +140,16 @@ func Load() (Config, error) {
 		cfg.MusicDownloadConcurrency = v
 	}
 	cfg.VideoEnabled = false
+	cfg.EmailVerifyEnabled = true
 	if settingsOk {
 		cfg.VideoEnabled = settings.VideoEnabled
+		cfg.EmailVerifyEnabled = settings.EmailVerifyEnabled
 	}
 	if raw, ok := getEnvRaw("VIDEO_ENABLED"); ok {
 		cfg.VideoEnabled = parseBool(raw, cfg.VideoEnabled)
+	}
+	if raw, ok := getEnvRaw("EMAIL_VERIFY_ENABLED"); ok {
+		cfg.EmailVerifyEnabled = parseBool(raw, cfg.EmailVerifyEnabled)
 	}
 	if raw, ok := getEnvRaw("PUBLIC_BASE_URL"); ok {
 		cfg.PublicBaseURL = strings.TrimSpace(raw)
@@ -323,6 +329,7 @@ type settingsFile struct {
 	UpdateDownloadConcurrency *int   `json:"update_download_concurrency"`
 	VideoDownloadConcurrency  *int   `json:"video_download_concurrency"`
 	MusicDownloadConcurrency  *int   `json:"music_download_concurrency"`
+	EmailVerifyEnabled        bool   `json:"email_verify_enabled"`
 }
 
 func loadSettingsFromJSON(path string) (settingsFile, bool) {

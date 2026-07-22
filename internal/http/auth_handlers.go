@@ -148,9 +148,11 @@ func (a *API) handleRegister(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_password", "password too short")
 		return
 	}
-	if emailCode == "" || !a.emailCodes.Verify(email, emailCode) {
-		writeError(w, http.StatusBadRequest, "invalid_email_code", "invalid email code")
-		return
+	if a.cfg.EmailVerifyEnabled {
+		if emailCode == "" || !a.emailCodes.Verify(email, emailCode) {
+			writeError(w, http.StatusBadRequest, "invalid_email_code", "invalid email code")
+			return
+		}
 	}
 	if deviceID != "" {
 		banned, err := a.devices.IsDeviceBanned(r.Context(), deviceID)
@@ -381,9 +383,11 @@ func (a *API) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_password", "password too short")
 		return
 	}
-	if emailCode == "" || !a.emailCodes.Verify(email, emailCode) {
-		writeError(w, http.StatusBadRequest, "invalid_email_code", "invalid email code")
-		return
+	if a.cfg.EmailVerifyEnabled {
+		if emailCode == "" || !a.emailCodes.Verify(email, emailCode) {
+			writeError(w, http.StatusBadRequest, "invalid_email_code", "invalid email code")
+			return
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
