@@ -56,16 +56,15 @@ switch ($choice) {
             New-Item -ItemType Directory -Path $BuildDir | Out-Null
         }
 
-        # 目标平台列表
+        # 目标平台列表 (Display 是文件名中使用的架构名)
         $targets = @(
-            @{ GOOS = "windows"; GOARCH = "amd64"; Ext = ".exe" },
-            @{ GOOS = "windows"; GOARCH = "386";   Ext = ".exe" },
-            @{ GOOS = "windows"; GOARCH = "arm64"; Ext = ".exe" },
-            @{ GOOS = "windows"; GOARCH = "arm";   Ext = ".exe" },
-            @{ GOOS = "linux";   GOARCH = "amd64"; Ext = ""    },
-            @{ GOOS = "linux";   GOARCH = "386";   Ext = ""    },
-            @{ GOOS = "linux";   GOARCH = "arm64"; Ext = ""    },
-            @{ GOOS = "linux";   GOARCH = "arm";   Ext = ""    }
+            @{ GOOS = "windows"; GOARCH = "amd64"; Display = "amd64"; Ext = ".exe" },
+            @{ GOOS = "windows"; GOARCH = "386";   Display = "i386";  Ext = ".exe" },
+            @{ GOOS = "windows"; GOARCH = "arm64"; Display = "arm64"; Ext = ".exe" },
+            @{ GOOS = "linux";   GOARCH = "amd64"; Display = "amd64"; Ext = ""    },
+            @{ GOOS = "linux";   GOARCH = "386";   Display = "i386";  Ext = ""    },
+            @{ GOOS = "linux";   GOARCH = "arm64"; Display = "arm64"; Ext = ""    },
+            @{ GOOS = "linux";   GOARCH = "arm";   Display = "arm";   Ext = ""    }
         )
 
         $ldflags = "-s -w"
@@ -76,8 +75,9 @@ switch ($choice) {
             $idx++
             $os = $t.GOOS
             $arch = $t.GOARCH
+            $display = $t.Display
             $ext = $t.Ext
-            $outName = "ocserver_${os}_${arch}_${version}${ext}"
+            $outName = "ocserver_${os}_${display}_${version}${ext}"
             $outPath = Join-Path $BuildDir $outName
 
             Write-Host "`n[$idx/$total] 编译 $os/$arch -> $outName" -ForegroundColor Yellow
