@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"os"
@@ -194,11 +196,18 @@ func Load() (Config, error) {
 
 	// JWT secret handling
 	secret, secretSet := getEnvRaw("JWT_SECRET")
+	jwtGenerated := false
 	if secretSet && secret != "" {
 		cfg.JWTSecret = []byte(secret)
 	}
 	if len(cfg.JWTSecret) == 0 {
-		cfg.JWTSecret = []byte("default-secret-at-least-32-characters-long")
+		// Generate a random 48-byte secret (64 chars in base64)
+		raw := make([]byte, 48)
+		if _, err := rand.Read(raw); err != nil {
+			return cfg, errors.New("failed to generate JWT secret: " + err.Error())
+		}
+		cfg.JWTSecret = []byte(base64.RawURLEncoding.EncodeToString(raw))
+		jwtGenerated = true
 	}
 	if len(cfg.JWTSecret) < 32 {
 		return cfg, errors.New("JWT_SECRET must be at least 32 bytes")
@@ -225,7 +234,7 @@ func Load() (Config, error) {
 
 	// 5. Persist effective config back to settings.json (auto-fill missing fields)
 	if settingsPath != "" {
-		persistSettings(settingsPath, cfg, secretSet)
+		persistSettings(settingsPath, cfg, secretSet, jwtGenerated)
 	}
 
 	return cfg, nil
@@ -233,9 +242,9 @@ func Load() (Config, error) {
 
 // persistSettings writes the effective configuration back to settings.json,
 // filling in any missing fields with their current effective values.
-// skipJWTIfExplicit is used to avoid storing an env-var-provided JWT secret
-// on disk unless no secret was previously set.
-func persistSettings(path string, cfg Config, envHasJWT bool) {
+// envHasJWT: whether JWT_SECRET was explicitly provided via environment variable
+// jwtGenerated: whether the JWT secret was freshly generated (always persist in that case)
+func persistSettings(path string, cfg Config, envHasJWT, jwtGenerated bool) {
 	// Load existing file to preserve what's there, then fill in gaps
 	existing, _ := loadSettingsFromJSON(path)
 
@@ -266,9 +275,13 @@ func persistSettings(path string, cfg Config, envHasJWT bool) {
 		existing.DataServerSyncToken = cfg.DataServerSyncToken
 		changed = true
 	}
-	// JWTSecret — only persist if it wasn't explicitly provided via env var
-	// (for security, env-var secrets stay out of the config file)
-	if strings.TrimSpace(existing.JWTSecret) == "" && !envHasJWT {
+	// JWTSecret — persist if:
+	//   - it was freshly generated (must save it or tokens will be invalid on restart)
+	//   - existing config has no secret AND it's not from env var (use defaults/settings value)
+	if jwtGenerated {
+		existing.JWTSecret = string(cfg.JWTSecret)
+		changed = true
+	} else if strings.TrimSpace(existing.JWTSecret) == "" && !envHasJWT {
 		existing.JWTSecret = string(cfg.JWTSecret)
 		changed = true
 	}
