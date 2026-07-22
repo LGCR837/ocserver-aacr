@@ -90,7 +90,7 @@ const titleShopHTML = `
         <h3>{{.Title}}</h3>
         <div class="price">价格：{{.Price}} 旧币</div>
         {{if $.LoggedIn}}
-        <form method="post" action="/report">
+        <form method="post" action="/shop/report">
           <input type="hidden" name="title_id" value="{{.ID}}">
           <input type="hidden" name="token" value="{{$.Token}}">
           <button class="btn primary" type="submit">购买</button>
@@ -108,7 +108,7 @@ const titleShopHTML = `
       <h3>自定义称号</h3>
       <div class="price">定价：200 旧币 / 个（全服唯一，不可与已有称号重复）</div>
       {{if .LoggedIn}}
-      <form method="post" action="/report" style="display:flex;gap:10px;flex-wrap:wrap;">
+      <form method="post" action="/shop/report" style="display:flex;gap:10px;flex-wrap:wrap;">
         <input name="custom_title" placeholder="输入自定义称号（不超过20字）" style="flex:1;min-width:220px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0b1220;color:var(--text);">
         <button class="btn primary" type="submit">购买</button>
       </form>
@@ -332,12 +332,12 @@ func (a *API) handleShopLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setShopTokenCookie(w, r, tokens.AccessToken, a.cfg.AccessTokenTTL)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/shop", http.StatusSeeOther)
 }
 
 func (a *API) handleShopLogout(w http.ResponseWriter, r *http.Request) {
 	clearShopTokenCookie(w, r)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/shop", http.StatusSeeOther)
 }
 
 func (a *API) renderTitleShop(w http.ResponseWriter, r *http.Request, errMsg, okMsg string) {

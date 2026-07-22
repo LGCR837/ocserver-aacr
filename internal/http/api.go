@@ -122,8 +122,8 @@ func New(cfg config.Config, db *sqlx.DB) http.Handler {
 	r.Use(gzipResponses)
 	r.Use(secureHeaders)
 
-	r.Get("/", api.handleLanding)
-	r.Get("/landing", api.handleLanding)
+	r.Get("/", api.handleHomePage)
+	r.Get("/landing", api.handleHomePage)
 	r.Get("/igotbanned", api.handleIGotBannedPage)
 	r.Post("/igotbanned", api.handleIGotBannedSubmit)
 	r.Get("/app", api.handleWebApp)
@@ -132,8 +132,9 @@ func New(cfg config.Config, db *sqlx.DB) http.Handler {
 	if api.webAppDir != "" {
 		r.Handle("/app-assets/*", http.StripPrefix("/app-assets/", http.FileServer(http.Dir(api.webAppDir))))
 	}
-	r.Get("/report", api.handleReportPage)
-	r.Post("/report", api.handleReportSubmit)
+	r.Get("/shop", api.handleLanding)
+	r.Get("/shop/report", api.handleReportPage)
+	r.Post("/shop/report", api.handleReportSubmit)
 	r.Post("/shop/login", api.handleShopLogin)
 	r.Get("/shop/logout", api.handleShopLogout)
 	r.Get("/v1/music/cover/*", api.handleMusicCoverProxy)
