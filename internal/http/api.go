@@ -127,6 +127,7 @@ func New(cfg config.Config, db *sqlx.DB) http.Handler {
 	r.Get("/igotbanned", api.handleIGotBannedPage)
 	r.Post("/igotbanned", api.handleIGotBannedSubmit)
 	r.Get("/app", api.handleWebApp)
+	r.Get("/app/login", api.handleWebAppLogin)
 	r.Get("/coin-tool", api.handleCoinToolPage)
 	if api.webAppDir != "" {
 		r.Handle("/app-assets/*", http.StripPrefix("/app-assets/", http.FileServer(http.Dir(api.webAppDir))))

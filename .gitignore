@@ -1,0 +1,35 @@
+# 构建产物
+server_linux_amd64
+server_windows_amd64.exe
+server_windows_amd64.exe~
+server_*.exe~
+nul.exe
+*.exe.bak
+
+# 数据库 (SQLite)
+*.db
+*.db-shm
+*.db-wal
+
+# 运行时配置与日志
+settings.json
+server_log.txt
+server_err.txt
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# Webapp 历史优化版本
+webapp/OPTIMIZATION.md
+webapp/app-optimized.js
+webapp/index-optimized.html
+webapp/coin-tool.html
+
+# 用户上传 (运行时生成)
+uploads/
+
+# macOS 跨平台开发残留
+._*
+.DS_Store

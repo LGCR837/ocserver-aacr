@@ -28,3 +28,11 @@ func (a *API) handleWebApp(w http.ResponseWriter, r *http.Request) {
 	}
 	http.ServeFile(w, r, filepath.Join(a.webAppDir, "index.html"))
 }
+
+func (a *API) handleWebAppLogin(w http.ResponseWriter, r *http.Request) {
+	if a.webAppDir == "" {
+		http.Redirect(w, r, "/app", http.StatusFound)
+		return
+	}
+	http.ServeFile(w, r, filepath.Join(a.webAppDir, "login.html"))
+}

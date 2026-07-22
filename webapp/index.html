@@ -1,87 +1,67 @@
-<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>旧聊 Web</title>
-    <link rel="stylesheet" href="/app-assets/app.css" />
-  </head>
-  <body>
-    <div id="app" class="app" data-view="chats" data-panel="list">
-      <div class="app-bg"></div>
-      <header class="topbar">
-        <div class="brand">
-          <img src="/landing-assets/oldchat_logo.png" alt="旧聊" />
-          <div>
-            <div class="brand-title">旧聊</div>
-            <div class="brand-subtitle">OldChat Web</div>
-          </div>
-        </div>
-        <div class="top-actions">
-          <div class="status-pill" id="statusPill">离线</div>
-          <div class="user-pill" id="userPill">未登录</div>
-          <button class="ghost" id="btnLogout">退出</button>
-        </div>
-      </header>
-
-      <main class="layout">
-        <aside class="sidebar" id="sidebar">
-          <div class="sidebar-head">
-            <div class="search">
-              <input id="searchInput" placeholder="搜索好友或群组" />
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OldChat for Kivotos</title>
+    <link rel="icon" href="/landing-assets/oldchat_logo.png" type="image/jpeg">
+    <link rel="stylesheet" href="/app-assets/assets/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="/app-assets/app.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="user-info" id="sidebarUserName" style="cursor:pointer" onclick="openMyProfile()">未登录</span>
+                <button id="logoutBtn" class="icon-btn" title="退出登录"><i class="fa-solid fa-right-from-bracket"></i></button>
+                <button id="themeToggleBtn" class="icon-btn" title="切换主题"><i class="fa-solid fa-circle-half-stroke"></i></button>
+                <button id="pinSidebarBtn" class="icon-btn" title="取消固定"><i class="fa-solid fa-thumbtack"></i></button>
             </div>
-            <div class="tabs">
-              <button class="tab active" data-view="chats">聊天</button>
-              <button class="tab" data-view="groups">群组</button>
-            </div>
-          </div>
-          <div class="list" id="listView"></div>
+            <div class="contact-list" id="contactList"></div>
         </aside>
-
-        <section class="conversation" id="conversation">
-          <div class="conversation-head">
-            <button class="ghost mini" id="btnBackList">列表</button>
-            <div>
-              <div class="conversation-title" id="conversationTitle">旧聊 Web</div>
-              <div class="conversation-meta" id="conversationMeta">选择一个会话开始聊天</div>
+        <main class="chat-area">
+            <div class="chat-header" id="chatHeader">
+                <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fa-solid fa-chevron-left"></i></button>
+                <span class="chat-title">OldChat for Kivotos</span>
             </div>
-          </div>
-          <div class="messages" id="messageList"></div>
-          <div class="empty" id="emptyState">
-            <div class="empty-title">还没有打开的会话</div>
-            <div class="empty-subtitle">从左侧选择好友或群组开始聊天</div>
-          </div>
-          <form class="composer" id="composer">
-            <textarea id="messageInput" rows="1" placeholder="输入消息..." maxlength="2000"></textarea>
-            <button type="submit" class="primary" id="btnSend">发送</button>
-          </form>
-        </section>
-
-      </main>
+            <div class="messages" id="messagesContainer"></div>
+            <div class="input-area" id="inputArea">
+                <div class="mention-popup" id="mentionPopup">
+                    <input type="text" class="mention-search" id="mentionSearch" placeholder="搜索成员...">
+                    <div class="mention-list" id="mentionList"></div>
+                </div>
+                <div class="quote-preview" id="quotePreview" style="display: none;">
+                    <span class="quote-preview-text"></span>
+                    <button id="cancelQuoteBtn" class="icon-btn" title="取消引用">✖</button>
+                </div>
+                <textarea id="messageInput" placeholder="输入消息..." rows="1"></textarea>
+                <div class="input-buttons">
+                    <button id="nowPlayingBtn" class="btn" style="display:none;" title="跳转到正在播放的语音"><i class="fa-solid fa-music"></i></button>
+                    <button id="sendImageBtn" class="btn">图片</button>
+                    <button id="emojiPlazaBtn" class="btn">表情</button>
+                    <button id="moreBtn" class="btn">更多</button>
+                    <button id="sendBtn" class="btn primary">发送</button>
+                </div>
+                <div class="more-menu" id="moreMenu">
+                    <button id="sendFileBtn">上传文件</button>
+                    <button id="sendUrlImageBtn">发送直链图片 (仅限网页端)</button>
+                    <button id="sendUrlVoiceBtn">发送直链音频</button>
+                    <button id="sendEmoticonBtn">内置表情</button>
+                </div>
+                <input type="file" id="fileInput" style="display: none" multiple>
+            </div>
+        </main>
     </div>
-
-    <div id="loginView" class="login">
-      <div class="login-card">
-        <div class="login-brand">
-          <img src="/landing-assets/oldchat_logo.png" alt="旧聊" />
-          <div>
-            <div class="login-title">欢迎回来</div>
-            <div class="login-subtitle">旧聊 Web · 轻量在线聊天</div>
-          </div>
+    <div class="url-input-overlay" id="urlInputOverlay" style="display:none;">
+        <div class="url-input-dialog">
+            <div class="url-input-title">输入图片链接</div>
+            <input type="text" id="urlImageInput" placeholder="https://...">
+            <div class="url-input-actions">
+                <button id="urlInputCancel" class="btn">取消</button>
+                <button id="urlInputSend" class="btn primary">发送</button>
+            </div>
         </div>
-        <form id="loginForm" class="login-form">
-          <label>账号 / 邮箱 / UID</label>
-          <input id="loginIdentifier" placeholder="输入用户名或邮箱" autocomplete="username" />
-          <label>密码</label>
-          <input id="loginPassword" type="password" placeholder="输入密码" autocomplete="current-password" />
-          <button type="submit" class="primary">登录</button>
-          <div class="login-hint">首次使用请在手机端注册账号</div>
-        </form>
-        <div class="login-footer">旧聊 Web 与移动端同账号体系</div>
-      </div>
     </div>
-
-    <div id="toast" class="toast" role="status"></div>
     <script src="/app-assets/app.js"></script>
-  </body>
+</body>
 </html>
