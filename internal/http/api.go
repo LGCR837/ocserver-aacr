@@ -138,7 +138,9 @@ func New(cfg config.Config, db *sqlx.DB) http.Handler {
 	r.Post("/shop/login", api.handleShopLogin)
 	r.Get("/shop/logout", api.handleShopLogout)
 	r.Get("/v1/music/cover/*", api.handleMusicCoverProxy)
-	r.Handle("/landing-assets/*", http.StripPrefix("/landing-assets/", http.FileServer(http.Dir("ooldchat-web/assets"))))
+	if landingDir := resolveLandingAssetsDir(); landingDir != "" {
+		r.Handle("/landing-assets/*", http.StripPrefix("/landing-assets/", http.FileServer(http.Dir(landingDir))))
+	}
 
 	r.Get("/admins", api.handleAdminIndex)
 	r.Post("/admins/login", api.handleAdminLogin)

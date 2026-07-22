@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+
+	mc "metrochat"
 )
 
 func SendCode(toEmail, code string) error {
@@ -44,5 +46,14 @@ func mailScriptPath() (string, error) {
 	if _, err := os.Stat(alt); err == nil {
 		return alt, nil
 	}
-	return "", fmt.Errorf("send_code.py not found")
+
+	// Not on disk — extract from embed
+	mailDir := filepath.Join(base, "mail_project")
+	if err := mc.ExtractDir(mc.MailProjectFS, "mail_project", mailDir); err != nil {
+		return "", fmt.Errorf("failed to extract mail_project: %v", err)
+	}
+	if _, err := os.Stat(script); err == nil {
+		return script, nil
+	}
+	return "", fmt.Errorf("send_code.py not found after extraction")
 }
