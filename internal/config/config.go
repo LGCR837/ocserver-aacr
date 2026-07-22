@@ -42,20 +42,18 @@ type Config struct {
 func Load() (Config, error) {
 	cfg := Config{}
 
-	cfg.Port = getEnv("PORT", "8080")
-	dbURL, dbURLSet := getEnvRaw("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = "metrochat.db"
-	}
-	cfg.DatabaseURL = resolveDatabaseURL(dbURL, dbURLSet)
-	cfg.UploadDir = getEnv("UPLOAD_DIR", "uploads")
-	cfg.UpdateDir = getEnv("UPDATE_DIR", "update")
-	cfg.PublicBaseURL = strings.TrimSpace(getEnv("PUBLIC_BASE_URL", ""))
-	cfg.DataServerBaseURL = strings.TrimRight(strings.TrimSpace(getEnv("DATA_SERVER_BASE_URL", "")), "/")
-	cfg.DataServerSyncToken = strings.TrimSpace(getEnv("DATA_SERVER_SYNC_TOKEN", ""))
-	cfg.AdminUser = getEnv("ADMIN_USER", "admin")
-	cfg.AdminPassword = getEnv("ADMIN_PASSWORD", "admin123456")
-	cfg.ResourceQuota = 10 * 1024 * 1024 * 1024 // default 10GB
+	// 1. Load settings.json first (lowest priority after defaults)
+	settingsPath := getEnv("SETTINGS_JSON", "settings.json")
+	settings, settingsOk := loadSettingsFromJSON(settingsPath)
+
+	// 2. Apply defaults
+	cfg.Port = "8080"
+	cfg.DatabaseURL = "metrochat.db"
+	cfg.UploadDir = "uploads"
+	cfg.UpdateDir = "update"
+	cfg.AdminUser = "admin"
+	cfg.AdminPassword = "admin123456"
+	cfg.ResourceQuota = 10 * 1024 * 1024 * 1024 // 10GB
 	cfg.MediaRateBytes = 5 << 20
 	cfg.UpdateRateBytes = 5 << 20
 	cfg.VideoRateBytes = 5 << 20
@@ -64,10 +62,19 @@ func Load() (Config, error) {
 	cfg.UpdateDownloadConcurrency = 4
 	cfg.VideoDownloadConcurrency = 2
 	cfg.MusicDownloadConcurrency = 8
+	cfg.VideoEnabled = false
+	cfg.EmailVerifyEnabled = true
+	cfg.JWTIssuer = "metrochat"
+	cfg.RefreshTokenTTL = 30 * 24 * time.Hour
 
-	settingsPath := getEnv("SETTINGS_JSON", "settings.json")
-	settings, settingsOk := loadSettingsFromJSON(settingsPath)
+	// 3. Override with settings.json values
 	if settingsOk {
+		if v := strings.TrimSpace(settings.AdminUser); v != "" {
+			cfg.AdminUser = v
+		}
+		if v := strings.TrimSpace(settings.AdminPassword); v != "" {
+			cfg.AdminPassword = v
+		}
 		if v := strings.TrimSpace(settings.PublicBaseURL); v != "" {
 			cfg.PublicBaseURL = v
 		}
@@ -76,6 +83,9 @@ func Load() (Config, error) {
 		}
 		if v := strings.TrimSpace(settings.DataServerSyncToken); v != "" {
 			cfg.DataServerSyncToken = v
+		}
+		if v := strings.TrimSpace(settings.JWTSecret); v != "" {
+			cfg.JWTSecret = []byte(v)
 		}
 		if settings.ResourceQuotaBytes > 0 {
 			cfg.ResourceQuota = settings.ResourceQuotaBytes
@@ -107,8 +117,44 @@ func Load() (Config, error) {
 		if settings.MusicDownloadConcurrency != nil && *settings.MusicDownloadConcurrency > 0 {
 			cfg.MusicDownloadConcurrency = *settings.MusicDownloadConcurrency
 		}
+		cfg.VideoEnabled = settings.VideoEnabled
+		cfg.EmailVerifyEnabled = settings.EmailVerifyEnabled
 	}
 
+	// 4. Override with environment variables (highest priority)
+	if v, ok := getEnvRaw("PORT"); ok {
+		cfg.Port = v
+	}
+	dbURL, dbURLSet := getEnvRaw("DATABASE_URL")
+	if dbURLSet {
+		if dbURL == "" {
+			dbURL = "metrochat.db"
+		}
+		cfg.DatabaseURL = resolveDatabaseURL(dbURL, true)
+	} else {
+		cfg.DatabaseURL = resolveDatabaseURL(cfg.DatabaseURL, false)
+	}
+	if v, ok := getEnvRaw("UPLOAD_DIR"); ok {
+		cfg.UploadDir = v
+	}
+	if v, ok := getEnvRaw("UPDATE_DIR"); ok {
+		cfg.UpdateDir = v
+	}
+	if raw, ok := getEnvRaw("PUBLIC_BASE_URL"); ok {
+		cfg.PublicBaseURL = strings.TrimSpace(raw)
+	}
+	if raw, ok := getEnvRaw("DATA_SERVER_BASE_URL"); ok {
+		cfg.DataServerBaseURL = strings.TrimRight(strings.TrimSpace(raw), "/")
+	}
+	if raw, ok := getEnvRaw("DATA_SERVER_SYNC_TOKEN"); ok {
+		cfg.DataServerSyncToken = strings.TrimSpace(raw)
+	}
+	if v, ok := getEnvRaw("ADMIN_USER"); ok {
+		cfg.AdminUser = v
+	}
+	if v, ok := getEnvRaw("ADMIN_PASSWORD"); ok {
+		cfg.AdminPassword = v
+	}
 	if envQuota := getInt64Env("RESOURCE_QUOTA_BYTES", 0); envQuota > 0 {
 		cfg.ResourceQuota = envQuota
 	}
@@ -139,46 +185,30 @@ func Load() (Config, error) {
 	if v, ok := getIntEnvAllowZero("MUSIC_DOWNLOAD_CONCURRENCY"); ok && v > 0 {
 		cfg.MusicDownloadConcurrency = v
 	}
-	cfg.VideoEnabled = false
-	cfg.EmailVerifyEnabled = true
-	if settingsOk {
-		cfg.VideoEnabled = settings.VideoEnabled
-		cfg.EmailVerifyEnabled = settings.EmailVerifyEnabled
-	}
 	if raw, ok := getEnvRaw("VIDEO_ENABLED"); ok {
 		cfg.VideoEnabled = parseBool(raw, cfg.VideoEnabled)
 	}
 	if raw, ok := getEnvRaw("EMAIL_VERIFY_ENABLED"); ok {
 		cfg.EmailVerifyEnabled = parseBool(raw, cfg.EmailVerifyEnabled)
 	}
-	if raw, ok := getEnvRaw("PUBLIC_BASE_URL"); ok {
-		cfg.PublicBaseURL = strings.TrimSpace(raw)
-	}
-	if raw, ok := getEnvRaw("DATA_SERVER_BASE_URL"); ok {
-		cfg.DataServerBaseURL = strings.TrimRight(strings.TrimSpace(raw), "/")
-	}
-	if raw, ok := getEnvRaw("DATA_SERVER_SYNC_TOKEN"); ok {
-		cfg.DataServerSyncToken = strings.TrimSpace(raw)
-	}
 
+	// JWT secret handling
 	secret, secretSet := getEnvRaw("JWT_SECRET")
-	if secret == "" {
-		if settingsOk && strings.TrimSpace(settings.JWTSecret) != "" {
-			secret = strings.TrimSpace(settings.JWTSecret)
-		} else {
-			secret = "default-secret-at-least-32-characters-long"
-		}
+	if secretSet && secret != "" {
+		cfg.JWTSecret = []byte(secret)
 	}
-	if len(secret) < 32 {
+	if len(cfg.JWTSecret) == 0 {
+		cfg.JWTSecret = []byte("default-secret-at-least-32-characters-long")
+	}
+	if len(cfg.JWTSecret) < 32 {
 		return cfg, errors.New("JWT_SECRET must be at least 32 bytes")
 	}
-	cfg.JWTSecret = []byte(secret)
-	if !secretSet && (settings.JWTSecret == "") && settingsPath != "" {
-		persistJWTSecret(settingsPath, settings, secret)
-	}
 
-	cfg.JWTIssuer = getEnv("JWT_ISSUER", "metrochat")
+	if v, ok := getEnvRaw("JWT_ISSUER"); ok {
+		cfg.JWTIssuer = v
+	}
 	if legacy := strings.TrimSpace(getEnv("JWT_ISSUER_LEGACY", "")); legacy != "" {
+		cfg.JWTIssuerLegacy = nil
 		for _, item := range strings.Split(legacy, ",") {
 			trimmed := strings.TrimSpace(item)
 			if trimmed != "" {
@@ -186,10 +216,134 @@ func Load() (Config, error) {
 			}
 		}
 	}
-	cfg.AccessTokenTTL = getDurationEnv("ACCESS_TOKEN_TTL", 0)
-	cfg.RefreshTokenTTL = getDurationEnv("REFRESH_TOKEN_TTL", 30*24*time.Hour)
+	if v := getDurationEnv("ACCESS_TOKEN_TTL", 0); v > 0 {
+		cfg.AccessTokenTTL = v
+	}
+	if v := getDurationEnv("REFRESH_TOKEN_TTL", 0); v > 0 {
+		cfg.RefreshTokenTTL = v
+	}
+
+	// 5. Persist effective config back to settings.json (auto-fill missing fields)
+	if settingsPath != "" {
+		persistSettings(settingsPath, cfg, secretSet)
+	}
 
 	return cfg, nil
+}
+
+// persistSettings writes the effective configuration back to settings.json,
+// filling in any missing fields with their current effective values.
+// skipJWTIfExplicit is used to avoid storing an env-var-provided JWT secret
+// on disk unless no secret was previously set.
+func persistSettings(path string, cfg Config, envHasJWT bool) {
+	// Load existing file to preserve what's there, then fill in gaps
+	existing, _ := loadSettingsFromJSON(path)
+
+	changed := false
+
+	// AdminUser
+	if strings.TrimSpace(existing.AdminUser) == "" {
+		existing.AdminUser = cfg.AdminUser
+		changed = true
+	}
+	// AdminPassword
+	if strings.TrimSpace(existing.AdminPassword) == "" {
+		existing.AdminPassword = cfg.AdminPassword
+		changed = true
+	}
+	// PublicBaseURL
+	if strings.TrimSpace(existing.PublicBaseURL) == "" {
+		existing.PublicBaseURL = cfg.PublicBaseURL
+		changed = true
+	}
+	// DataServerBaseURL
+	if strings.TrimSpace(existing.DataServerBaseURL) == "" {
+		existing.DataServerBaseURL = cfg.DataServerBaseURL
+		changed = true
+	}
+	// DataServerSyncToken
+	if strings.TrimSpace(existing.DataServerSyncToken) == "" {
+		existing.DataServerSyncToken = cfg.DataServerSyncToken
+		changed = true
+	}
+	// JWTSecret — only persist if it wasn't explicitly provided via env var
+	// (for security, env-var secrets stay out of the config file)
+	if strings.TrimSpace(existing.JWTSecret) == "" && !envHasJWT {
+		existing.JWTSecret = string(cfg.JWTSecret)
+		changed = true
+	}
+	// ResourceQuotaBytes
+	if existing.ResourceQuotaBytes <= 0 {
+		existing.ResourceQuotaBytes = cfg.ResourceQuota
+		changed = true
+	}
+	// RegistrationLimit
+	if existing.RegistrationLimit <= 0 {
+		existing.RegistrationLimit = cfg.RegistrationLimit
+		changed = true
+	}
+	// VideoEnabled
+	if !fileExists(path) {
+		existing.VideoEnabled = cfg.VideoEnabled
+		existing.EmailVerifyEnabled = cfg.EmailVerifyEnabled
+		changed = true
+	}
+	// MediaRateBytes
+	if existing.MediaRateBytes == nil {
+		v := cfg.MediaRateBytes
+		existing.MediaRateBytes = &v
+		changed = true
+	}
+	if existing.UpdateRateBytes == nil {
+		v := cfg.UpdateRateBytes
+		existing.UpdateRateBytes = &v
+		changed = true
+	}
+	if existing.VideoRateBytes == nil {
+		v := cfg.VideoRateBytes
+		existing.VideoRateBytes = &v
+		changed = true
+	}
+	if existing.MusicRateBytes == nil {
+		v := cfg.MusicRateBytes
+		existing.MusicRateBytes = &v
+		changed = true
+	}
+	if existing.MediaDownloadConcurrency == nil {
+		v := cfg.MediaDownloadConcurrency
+		existing.MediaDownloadConcurrency = &v
+		changed = true
+	}
+	if existing.UpdateDownloadConcurrency == nil {
+		v := cfg.UpdateDownloadConcurrency
+		existing.UpdateDownloadConcurrency = &v
+		changed = true
+	}
+	if existing.VideoDownloadConcurrency == nil {
+		v := cfg.VideoDownloadConcurrency
+		existing.VideoDownloadConcurrency = &v
+		changed = true
+	}
+	if existing.MusicDownloadConcurrency == nil {
+		v := cfg.MusicDownloadConcurrency
+		existing.MusicDownloadConcurrency = &v
+		changed = true
+	}
+
+	if !changed {
+		return
+	}
+
+	// Ensure directory exists
+	if dir := filepath.Dir(path); dir != "" && dir != "." {
+		_ = os.MkdirAll(dir, 0o755)
+	}
+
+	data, err := json.MarshalIndent(existing, "", "  ")
+	if err != nil {
+		return
+	}
+	_ = os.WriteFile(path, data, 0o644)
 }
 
 func getEnv(key, def string) string {
@@ -308,12 +462,9 @@ func parseBool(raw string, def bool) bool {
 	return def
 }
 
-type quotaSettings struct {
-	ResourceQuotaBytes int64 `json:"resource_quota_bytes"`
-	RegistrationLimit  int   `json:"registration_limit"`
-}
-
 type settingsFile struct {
+	AdminUser                 string `json:"admin_user"`
+	AdminPassword             string `json:"admin_password"`
 	ResourceQuotaBytes        int64  `json:"resource_quota_bytes"`
 	RegistrationLimit         int    `json:"registration_limit"`
 	PublicBaseURL             string `json:"public_base_url"`
@@ -345,51 +496,6 @@ func loadSettingsFromJSON(path string) (settingsFile, bool) {
 		return settingsFile{}, false
 	}
 	return cfg, true
-}
-
-func persistJWTSecret(path string, settings settingsFile, secret string) {
-	if path == "" || secret == "" {
-		return
-	}
-	if settings.JWTSecret != "" {
-		return
-	}
-	settings.JWTSecret = secret
-	data, err := json.MarshalIndent(settings, "", "  ")
-	if err != nil {
-		return
-	}
-	_ = os.WriteFile(path, data, 0644)
-}
-
-func loadQuotaFromJSON(path string) int64 {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0
-	}
-	var cfg quotaSettings
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return 0
-	}
-	if cfg.ResourceQuotaBytes > 0 {
-		return cfg.ResourceQuotaBytes
-	}
-	return 0
-}
-
-func loadRegistrationLimitFromJSON(path string) int {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0
-	}
-	var cfg quotaSettings
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return 0
-	}
-	if cfg.RegistrationLimit > 0 {
-		return cfg.RegistrationLimit
-	}
-	return 0
 }
 
 func getDurationEnv(key string, def time.Duration) time.Duration {
