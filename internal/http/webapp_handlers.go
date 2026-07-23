@@ -1,99 +1,50 @@
 package httpapi
 
 import (
-	"log"
+	"bytes"
+	"io/fs"
 	"net/http"
-	"os"
-	"path/filepath"
+	"time"
 
 	mc "metrochat"
 )
 
-// resolveWebAppDir finds webapp/ on disk, or extracts it from the embedded FS.
-func resolveWebAppDir() string {
-	// Check disk first (allows override)
-	candidates := []string{"webapp", "server/webapp"}
-	if exe, err := os.Executable(); err == nil {
-		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "webapp"))
+// webappFS returns the embedded webapp/ filesystem as an fs.FS.
+func webappFS() fs.FS {
+	sub, err := fs.Sub(mc.WebappFS, "webapp")
+	if err != nil {
+		return nil
 	}
-	for _, dir := range candidates {
-		if fileExists(filepath.Join(dir, "index.html")) {
-			return dir
-		}
-	}
-
-	// Not on disk — extract from embed
-	target := "webapp"
-	if exe, err := os.Executable(); err == nil {
-		target = filepath.Join(filepath.Dir(exe), "webapp")
-	}
-	if err := mc.ExtractDir(mc.WebappFS, "webapp", target); err != nil {
-		log.Printf("WARN: failed to extract webapp from embed: %v", err)
-		return ""
-	}
-	if fileExists(filepath.Join(target, "index.html")) {
-		return target
-	}
-	return ""
+	return sub
 }
 
-// resolveLandingAssetsDir finds ooldchat-web/assets/ on disk, or extracts from embed.
-func resolveLandingAssetsDir() string {
-	candidates := []string{"ooldchat-web/assets"}
-	if exe, err := os.Executable(); err == nil {
-		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "ooldchat-web/assets"))
+// landingAssetsFS returns the embedded ooldchat-web/assets/ filesystem as an fs.FS.
+func landingAssetsFS() fs.FS {
+	sub, err := fs.Sub(mc.LandingAssetsFS, "ooldchat-web/assets")
+	if err != nil {
+		return nil
 	}
-	for _, dir := range candidates {
-		if isDir(dir) {
-			return dir
-		}
-	}
-
-	// Extract from embed
-	target := "ooldchat-web/assets"
-	if exe, err := os.Executable(); err == nil {
-		target = filepath.Join(filepath.Dir(exe), "ooldchat-web/assets")
-	}
-	if err := mc.ExtractDir(mc.LandingAssetsFS, "ooldchat-web/assets", target); err != nil {
-		log.Printf("WARN: failed to extract landing assets from embed: %v", err)
-		return ""
-	}
-	if isDir(target) {
-		return target
-	}
-	return ""
+	return sub
 }
 
-func fileExists(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
-}
-
-func isDir(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.IsDir()
+// serveEmbeddedFile reads a file from the embedded FS and writes it to the response.
+func serveEmbeddedFile(w http.ResponseWriter, r *http.Request, fsys fs.FS, name string) {
+	data, err := fs.ReadFile(fsys, name)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(data))
 }
 
 func (a *API) handleWebApp(w http.ResponseWriter, r *http.Request) {
-	if a.webAppDir == "" {
-		a.handleLanding(w, r)
-		return
-	}
-	http.ServeFile(w, r, filepath.Join(a.webAppDir, "index.html"))
+	serveEmbeddedFile(w, r, webappFS(), "index.html")
 }
 
 func (a *API) handleWebAppLogin(w http.ResponseWriter, r *http.Request) {
-	if a.webAppDir == "" {
-		http.Redirect(w, r, "/app", http.StatusFound)
-		return
-	}
-	http.ServeFile(w, r, filepath.Join(a.webAppDir, "login.html"))
+	serveEmbeddedFile(w, r, webappFS(), "login.html")
 }
 
 func (a *API) handleHomePage(w http.ResponseWriter, r *http.Request) {
-	if a.webAppDir == "" {
-		http.Redirect(w, r, "/shop", http.StatusFound)
-		return
-	}
-	http.ServeFile(w, r, filepath.Join(a.webAppDir, "landing.html"))
+	serveEmbeddedFile(w, r, webappFS(), "landing.html")
 }

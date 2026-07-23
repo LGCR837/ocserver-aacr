@@ -54,7 +54,6 @@ type API struct {
 	adminSessions     *adminSessions
 	ipLimiter         *ratelimit.Limiter
 	idLimiter         *ratelimit.Limiter
-	webAppDir         string
 	typing            *typingStore
 	tokenVersionMu    sync.Mutex
 	tokenVersionCache map[string]tokenVersionEntry
@@ -101,7 +100,6 @@ func New(cfg config.Config, db *sqlx.DB) http.Handler {
 		adminSessions:     newAdminSessions(),
 		ipLimiter:         ratelimit.NewLimiter(1.0, 5),
 		idLimiter:         ratelimit.NewLimiter(0.2, 3),
-		webAppDir:         resolveWebAppDir(),
 		typing:            newTypingStore(),
 		tokenVersionCache: make(map[string]tokenVersionEntry),
 	}
@@ -129,8 +127,8 @@ func New(cfg config.Config, db *sqlx.DB) http.Handler {
 	r.Get("/app", api.handleWebApp)
 	r.Get("/app/login", api.handleWebAppLogin)
 	r.Get("/coin-tool", api.handleCoinToolPage)
-	if api.webAppDir != "" {
-		r.Handle("/app-assets/*", http.StripPrefix("/app-assets/", http.FileServer(http.Dir(api.webAppDir))))
+	if wfs := webappFS(); wfs != nil {
+		r.Handle("/app-assets/*", http.StripPrefix("/app-assets/", http.FileServer(http.FS(wfs))))
 	}
 	r.Get("/shop", api.handleLanding)
 	r.Get("/shop/report", api.handleReportPage)
@@ -138,8 +136,8 @@ func New(cfg config.Config, db *sqlx.DB) http.Handler {
 	r.Post("/shop/login", api.handleShopLogin)
 	r.Get("/shop/logout", api.handleShopLogout)
 	r.Get("/v1/music/cover/*", api.handleMusicCoverProxy)
-	if landingDir := resolveLandingAssetsDir(); landingDir != "" {
-		r.Handle("/landing-assets/*", http.StripPrefix("/landing-assets/", http.FileServer(http.Dir(landingDir))))
+	if lfs := landingAssetsFS(); lfs != nil {
+		r.Handle("/landing-assets/*", http.StripPrefix("/landing-assets/", http.FileServer(http.FS(lfs))))
 	}
 
 	r.Get("/admins", api.handleAdminIndex)
