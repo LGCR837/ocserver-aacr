@@ -13,9 +13,6 @@ var WebappFS embed.FS
 //go:embed all:ooldchat-web/assets
 var LandingAssetsFS embed.FS
 
-//go:embed all:mail_project
-var MailProjectFS embed.FS
-
 // ExtractDir walks an embedded FS and writes files that don't exist on disk.
 // Already-existing files are preserved (allows user overrides).
 func ExtractDir(efs fs.FS, srcRoot, dest string) error {
