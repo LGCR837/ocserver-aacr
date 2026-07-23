@@ -119,8 +119,12 @@ func Load() (Config, error) {
 		if settings.MusicDownloadConcurrency != nil && *settings.MusicDownloadConcurrency > 0 {
 			cfg.MusicDownloadConcurrency = *settings.MusicDownloadConcurrency
 		}
-		cfg.VideoEnabled = settings.VideoEnabled
-		cfg.EmailVerifyEnabled = settings.EmailVerifyEnabled
+		if settings.VideoEnabled != nil {
+			cfg.VideoEnabled = *settings.VideoEnabled
+		}
+		if settings.EmailVerifyEnabled != nil {
+			cfg.EmailVerifyEnabled = *settings.EmailVerifyEnabled
+		}
 	}
 
 	// 4. Override with environment variables (highest priority)
@@ -296,9 +300,15 @@ func persistSettings(path string, cfg Config, envHasJWT, jwtGenerated bool) {
 		changed = true
 	}
 	// VideoEnabled
-	if !fileExists(path) {
-		existing.VideoEnabled = cfg.VideoEnabled
-		existing.EmailVerifyEnabled = cfg.EmailVerifyEnabled
+	if existing.VideoEnabled == nil {
+		v := cfg.VideoEnabled
+		existing.VideoEnabled = &v
+		changed = true
+	}
+	// EmailVerifyEnabled
+	if existing.EmailVerifyEnabled == nil {
+		v := cfg.EmailVerifyEnabled
+		existing.EmailVerifyEnabled = &v
 		changed = true
 	}
 	// MediaRateBytes
@@ -484,7 +494,7 @@ type settingsFile struct {
 	DataServerBaseURL         string `json:"data_server_base_url"`
 	DataServerSyncToken       string `json:"data_server_sync_token"`
 	JWTSecret                 string `json:"jwt_secret"`
-	VideoEnabled              bool   `json:"video_enabled"`
+	VideoEnabled              *bool  `json:"video_enabled"`
 	MediaRateBytes            *int64 `json:"media_transfer_rate_bytes"`
 	UpdateRateBytes           *int64 `json:"update_transfer_rate_bytes"`
 	VideoRateBytes            *int64 `json:"video_transfer_rate_bytes"`
@@ -493,7 +503,7 @@ type settingsFile struct {
 	UpdateDownloadConcurrency *int   `json:"update_download_concurrency"`
 	VideoDownloadConcurrency  *int   `json:"video_download_concurrency"`
 	MusicDownloadConcurrency  *int   `json:"music_download_concurrency"`
-	EmailVerifyEnabled        bool   `json:"email_verify_enabled"`
+	EmailVerifyEnabled        *bool  `json:"email_verify_enabled"`
 }
 
 func loadSettingsFromJSON(path string) (settingsFile, bool) {
