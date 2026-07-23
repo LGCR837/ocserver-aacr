@@ -128,7 +128,7 @@ func New(cfg config.Config, db *sqlx.DB) http.Handler {
 	r.Get("/app/login", api.handleWebAppLogin)
 	r.Get("/coin-tool", api.handleCoinToolPage)
 	if wfs := webappFS(); wfs != nil {
-		r.Handle("/app-assets/*", http.StripPrefix("/app-assets/", http.FileServer(http.FS(wfs))))
+		r.Handle("/app-assets/*", cacheStaticAssets(http.StripPrefix("/app-assets/", http.FileServer(http.FS(wfs)))))
 	}
 	r.Get("/shop", api.handleLanding)
 	r.Get("/shop/report", api.handleReportPage)
@@ -137,7 +137,7 @@ func New(cfg config.Config, db *sqlx.DB) http.Handler {
 	r.Get("/shop/logout", api.handleShopLogout)
 	r.Get("/v1/music/cover/*", api.handleMusicCoverProxy)
 	if lfs := landingAssetsFS(); lfs != nil {
-		r.Handle("/landing-assets/*", http.StripPrefix("/landing-assets/", http.FileServer(http.FS(lfs))))
+		r.Handle("/landing-assets/*", cacheStaticAssets(http.StripPrefix("/landing-assets/", http.FileServer(http.FS(lfs)))))
 	}
 
 	r.Get("/admins", api.handleAdminIndex)

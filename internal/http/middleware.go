@@ -317,6 +317,43 @@ func truncatePath(path string, max int) string {
 	return path[:max-3] + "..."
 }
 
+// cacheStaticAssets wraps an http.Handler and sets Cache-Control header
+// for static assets. Font files (.woff2, .woff, .ttf, .eot) get permanent
+// cache (1 year, immutable) since they rarely change. Other assets get
+// short cache to allow updates.
+func cacheStaticAssets(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Font files: cache permanently
+		if isFontFile(r.URL.Path) {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			// Other assets: short cache (1 hour)
+			w.Header().Set("Cache-Control", "public, max-age=3600")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func isFontFile(path string) bool {
+	// Check common font file extensions
+	if len(path) < 5 {
+		return false
+	}
+	ext := strings.ToLower(path[len(path)-5:])
+	switch ext {
+	case ".woff2", ".woff", ".ttf", ".eot":
+		return true
+	}
+	// Also check .otf (4 chars)
+	if len(path) >= 4 {
+		ext4 := strings.ToLower(path[len(path)-4:])
+		if ext4 == ".otf" {
+			return true
+		}
+	}
+	return false
+}
+
 func truncateUserAgent(ua string, max int) string {
 	ua = strings.ReplaceAll(ua, "\n", " ")
 	ua = strings.ReplaceAll(ua, "\r", " ")

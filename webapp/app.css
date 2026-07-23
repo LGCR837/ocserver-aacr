@@ -50,7 +50,7 @@ body, .sidebar, .chat-area, .messages, .input-area, .contact-list, .chat-header,
 }
 
 @font-face {
-	font-display:swap;font-family:blueaka;font-style:normal;font-weight:400;src:url(/app-assets/assets/blueaka.ttf) format("truetype")
+	font-display:swap;font-family:blueaka;font-style:normal;font-weight:400;src:url(/app-assets/assets/blueaka.woff2) format("woff2")
 }
 
 * {
